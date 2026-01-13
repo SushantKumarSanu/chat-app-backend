@@ -1,0 +1,17 @@
+import express from 'express';
+
+import authMiddleware from '../middlewares/auth.middlewares.js';
+
+const router = express.Router();
+
+
+
+router.get("/profile",authMiddleware,(req,res)=>{
+    res.status(200).json({
+        message:"protected route accessed",
+        user: req.user
+    });
+});
+
+
+export default router;
