@@ -3,6 +3,7 @@ import cors from 'cors';
 import authRoutes from './routes/auth.routes.js';
 import protectedRoutes from './routes/protected.routes.js';
 import chatRoutes from './routes/chat.routes.js';
+import messageRoutes from './routes/message.routes.js'
 const app = express();
 
 
@@ -15,8 +16,7 @@ app.use(express.json());
 app.use('/api/auth',authRoutes);
 app.use('/api/protected',protectedRoutes);
 app.use('/api/chat',chatRoutes);
-
-
+app.use('/api/messages',messageRoutes);
 
 app.get('/',(req,res)=>{
     res.send('server is running');
