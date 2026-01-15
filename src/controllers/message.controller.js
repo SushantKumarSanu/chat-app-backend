@@ -1,5 +1,6 @@
 import Message from "../models/Message.js";
 import Chat from "../models/Chat.js";
+import {io} from "../server.js";
 
 
 export const sendMessage = async (req,res) =>{
@@ -16,6 +17,7 @@ export const sendMessage = async (req,res) =>{
         })
         message = await message.populate("sender","username email avatar");
         await Chat.findByIdAndUpdate(chatId,{lastMessage:message._id});
+        io.to(chatId).emit("new message",message);
         res.status(201).json(message);
     }catch(error){
         console.error("SEND MESSAGE ERROR:", error);
