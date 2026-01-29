@@ -20,7 +20,6 @@ export const sendMessage = async (req,res) =>{
         io.to(chatId).emit("new message",message);
         res.status(201).json(message);
     }catch(error){
-        console.error("SEND MESSAGE ERROR:", error);
         res.status(500).json({ message: "Server error" });
 
     }

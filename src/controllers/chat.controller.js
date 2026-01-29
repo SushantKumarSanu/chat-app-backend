@@ -40,7 +40,6 @@ export const fetchChats = async (req,res) =>{
         .sort({updatedAt:-1});
         res.status(200).json(chats);
     }catch(error){
-        console.error("FETCH CHATS ERROR:", error);
         res.status(500).json({ message: "Server error" });
     }
 }
