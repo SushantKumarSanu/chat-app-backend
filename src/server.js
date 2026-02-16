@@ -18,28 +18,38 @@ const io = new Server(server,{
     }
 });
 
+
+
+io.use(async(socket,next)=>{
+    try{
+        const token = socket.handshake.auth?.token;
+        if (!token) {
+            return next(new Error("No token provided"));
+        };
+        const decoded = jwt.verify(token,process.env.JWT_SECRET);
+        socket.userId = decoded.userId;
+        await User.findByIdAndUpdate(socket.userId,{isOnline:true});
+        next();
+    }catch{
+        next(new Error("Not authenticated")); 
+    };
+
+});
+
 io.on("connection",(socket)=>{
     console.log("Socket connected:",socket.id);
-    socket.on("setup",async(token)=>{
-        try{
-            const decoded = jwt.verify(token,process.env.JWT_SECRET);
-            socket.userId = decoded.userId;
-            socket.join(socket.userId);
-            await User.findByIdAndUpdate(socket.userId,{isOnline:true});
-            socket.emit("connected");
-            socket.broadcast.emit("user online",socket.userId);
-            console.log("User Authenticated :",socket.userId);
-        }catch(error){
-            console.log("Socket auth failed");
-            socket.disconnect();
-        }
-    });
+    if(socket.userId){
+        socket.join(socket.userId);
+        console.log(`Joined the personal room of name ${socket.userId}`);
+    }
+    socket.emit("connected");
     socket.on("join chat",(chatId)=>{
         if(!socket.userId||!chatId){
             console.log(!chatId ? "chatId is required" : "not authenticated");
             return;
         };
         socket.join(chatId);
+        socket.emit("join chat");
         console.log(`User ${socket.userId} is connected to the chat ${chatId}`);
 
     });
@@ -53,10 +63,17 @@ io.on("connection",(socket)=>{
         socket.to(chatId).emit("stop typing",{chatId,user:socket.userId});
     });
     socket.on("disconnect",async()=>{
+        try{
         console.log("Socket disconnected :",socket.id);
         if(!socket.userId) return;
-        await User.findByIdAndUpdate(socket.userId,{isOnline:false});
-        socket.broadcast.emit("user offline",socket.userId);
+        const room = io.sockets.adapter.rooms.get(socket.userId);
+        if(!room){
+            await User.findByIdAndUpdate(socket.userId,{isOnline:false}).lean();
+            socket.broadcast.emit("user offline",socket.userId);
+        };
+        }catch(error){
+            console.error("Disconnect error:",error);
+        }
     });
 });
 
