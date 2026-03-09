@@ -38,7 +38,9 @@ io.use(async(socket,next)=>{
 
 io.on("connection",(socket)=>{
     console.log("Socket connected:",socket.id);
+
     if(socket.userId){
+        socket.broadcast.emit("user online",{user:socket.userId});
         socket.join(socket.userId);
         console.log(`Joined the personal room of name ${socket.userId}`);
     }
@@ -69,7 +71,7 @@ io.on("connection",(socket)=>{
         const room = io.sockets.adapter.rooms.get(socket.userId);
         if(!room){
             await User.findByIdAndUpdate(socket.userId,{isOnline:false}).lean();
-            socket.broadcast.emit("user offline",socket.userId);
+            socket.broadcast.emit("user offline",{user:socket.userId});
         };
         }catch(error){
             console.error("Disconnect error:",error);
