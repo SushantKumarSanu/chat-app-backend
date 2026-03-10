@@ -16,7 +16,7 @@ export const sendMessage = async (req,res) =>{
             messageType:messageType||"text"
         })
         message = await message.populate("sender","username email avatar");
-        await Chat.findByIdAndUpdate(chatId,{lastMessage:message._id});
+        await Chat.findByIdAndUpdate(chatId,{lastMessage:message._id,readBy:null});
         io.to(chatId).emit("new message",message);
         res.status(201).json(message);
     }catch(error){

@@ -21,9 +21,17 @@ const chatSchema = new mongoose.Schema({
         ref:"User"
     },
     lastMessage:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"Message"
-    }
+        messageId:  {
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"Message"
+        },
+        readBy: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        }
+        ]
+    }    
 },
 {timestamps:true}
 )

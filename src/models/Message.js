@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ref } from "process";
 
 const messageSchema = new mongoose.Schema({
     sender:{
@@ -21,12 +22,11 @@ const messageSchema = new mongoose.Schema({
         required:true,
         trim:true
     },
-    readBy: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    }
-  ]
+    deliveredTo:[{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"User"
+
+    }]
 },
 {timestamps:true}
 );
