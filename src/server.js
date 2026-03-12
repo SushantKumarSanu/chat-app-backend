@@ -5,6 +5,7 @@ import http from 'http';
 import {Server} from 'socket.io';
 import app from './app.js';
 import User from './models/User.js';
+import Message from './models/Message.js';
 import connectDB from './configs/db.js';
 import jwt from 'jsonwebtoken';
 
@@ -64,6 +65,14 @@ io.on("connection",(socket)=>{
           if(!chatId || !socket.userId) return;
         socket.to(chatId).emit("stop typing",{chatId,user:socket.userId});
     });
+    socket.on("message recieved",async ({message,user})=>{
+        if(!user||!message) return;
+        const foundUser = await User.findById(user)
+        const foundMessage = await Message.findByIdAndUpdate(message,{deliveredTo:[foundUser._id]});
+        if(!foundUser||!foundMessage) return ;
+
+        socket.to(String(foundMessage.sender._id)).emit("message recieved",{message:message,user:foundUser._id});
+    })
     socket.on("disconnect",async()=>{
         try{
         console.log("Socket disconnected :",socket.id);
