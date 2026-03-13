@@ -1,4 +1,5 @@
 import Chat from "../models/Chat.js";
+import Message from "../models/Message.js";
 
 export const accessChat = async (req,res) => {
     try{
@@ -51,6 +52,14 @@ export const fetchChats = async (req,res) =>{
                     }
                 })
         .sort({updatedAt:-1});
+        const chatIds = chats.map(chat=>chat._id);
+        await Message.updateMany({
+            chat:{ $in: chatIds },
+            sender:{ $ne: req.user._id },
+            deliveredTo: { $ne: req.user._id }
+        },{
+            $addToSet:{deliveredTo:req.user._id}
+        })
         res.status(200).json(chats);
     }catch(error){
         res.status(500).json({ message: "Server error" });
