@@ -13,7 +13,7 @@ export const accessChat = async (req,res) => {
         })
         .populate("users","-password")
         .populate({
-                    path: "lastMessage",
+                    path: "lastMessage.messageId",
                     populate: {
                         path: "sender",
                         select: "username email"
@@ -45,7 +45,7 @@ export const fetchChats = async (req,res) =>{
         })
         .populate("users","-password")
         .populate({
-                    path: "lastMessage",
+                    path: "lastMessage.messageId",
                     populate: {
                         path: "sender",
                         select: "username email"

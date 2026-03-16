@@ -25,6 +25,13 @@ const chatSchema = new mongoose.Schema({
             type:mongoose.Schema.Types.ObjectId,
             ref:"Message"
         },
+        sender:{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"User"
+        },
+        content:{
+            type:String
+        },
         readBy: [
         {
             type: mongoose.Schema.Types.ObjectId,

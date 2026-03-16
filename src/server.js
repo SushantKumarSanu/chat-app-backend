@@ -6,6 +6,7 @@ import {Server} from 'socket.io';
 import app from './app.js';
 import User from './models/User.js';
 import Message from './models/Message.js';
+import Chat from './models/Chat.js';
 import connectDB from './configs/db.js';
 import jwt from 'jsonwebtoken';
 
@@ -72,7 +73,16 @@ io.on("connection",(socket)=>{
         if(!foundUser||!foundMessage) return ;
 
         socket.to(String(foundMessage.sender._id)).emit("message recieved",{message:message,user:foundUser._id});
-    })
+    });
+    socket.on("message read",async({message,user})=>{
+        if(!message||!user) return;
+        const foundUser = await User.findById(message.sender);
+        if(!foundUser) return;
+        const foundChat = await Chat.findOneAndUpdate({_id:message.chat,"lastMessage.messageId":message._id,"lastMessage.sender":{$ne:user}},{$addToSet:{"lastMessage.readBy":user}},{new:true});
+        console.log(foundChat)
+        if(!foundChat) return ;
+        socket.to(String(foundChat._id)).emit("message read",{updatedChat:foundChat});
+    });
     socket.on("disconnect",async()=>{
         try{
         console.log("Socket disconnected :",socket.id);

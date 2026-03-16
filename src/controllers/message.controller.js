@@ -16,7 +16,8 @@ export const sendMessage = async (req,res) =>{
             messageType:messageType||"text"
         })
         message = await message.populate("sender","username email avatar");
-        await Chat.findByIdAndUpdate(chatId,{lastMessage:message._id,readBy:null});
+        const chat = await Chat.findByIdAndUpdate(chatId,{$set:{"lastMessage.messageId":message._id,"lastMessage.content":message.content,"lastMessage.sender":req.user._id,"lastMessage.readBy":[]}}).lean();
+        console.log(chat)
         io.to(chatId).emit("new message",message);
         res.status(201).json(message);
     }catch(error){
@@ -31,6 +32,8 @@ export const fetchMessages = async(req,res) =>{
         if(!chatId){
             return res.status(400).json({message:"Chatid is required"});
         };
+        const chat = await Chat.findOneAndUpdate({_id:chatId,"lastMessage.sender":{$ne:req.user._id}}
+        ,{$addToSet:{"lastMessage.readBy":req.user._id}});
         const page = Number(req.query.page) || 1
         const limit = Number(req.query.limit) || 20 
         const skip = (page - 1)*limit;
