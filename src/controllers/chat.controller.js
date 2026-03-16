@@ -1,5 +1,8 @@
+import { isObjectIdOrHexString } from "mongoose";
 import Chat from "../models/Chat.js";
 import Message from "../models/Message.js";
+import {io} from "../server.js";
+
 
 export const accessChat = async (req,res) => {
     try{
@@ -53,13 +56,22 @@ export const fetchChats = async (req,res) =>{
                 })
         .sort({updatedAt:-1});
         const chatIds = chats.map(chat=>chat._id);
-        await Message.updateMany({
+        const undeliveredMessages = await Message.find({
             chat:{ $in: chatIds },
             sender:{ $ne: req.user._id },
             deliveredTo: { $ne: req.user._id }
+        })
+        const messages = await Message.updateMany({
+            _id:{$in:undeliveredMessages.map(m=>m._id)}
         },{
             $addToSet:{deliveredTo:req.user._id}
-        })
+        });
+        undeliveredMessages.forEach(msg => {
+            io.to(msg.sender.toString()).emit("message recieved",{
+                message:msg._id,
+                user:req.user._id
+            });
+        });
         res.status(200).json(chats);
     }catch(error){
         res.status(500).json({ message: "Server error" });

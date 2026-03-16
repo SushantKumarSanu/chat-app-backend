@@ -33,7 +33,7 @@ export const fetchMessages = async(req,res) =>{
             return res.status(400).json({message:"Chatid is required"});
         };
         const chat = await Chat.findOneAndUpdate({_id:chatId,"lastMessage.sender":{$ne:req.user._id}}
-        ,{$addToSet:{"lastMessage.readBy":req.user._id}});
+        ,{$addToSet:{"lastMessage.readBy":req.user._id}},{new:true});
         const page = Number(req.query.page) || 1
         const limit = Number(req.query.limit) || 20 
         const skip = (page - 1)*limit;
@@ -43,8 +43,11 @@ export const fetchMessages = async(req,res) =>{
         .sort({createdAt:-1})
         .skip(skip)
         .limit(limit)
+        if(chat){
+        console.log("hellow2")
+        io.to(chat.lastMessage.sender.toString()).emit("message read",{updatedChat:chat});
+        }
         res.status(200).json(messages);
-
     }catch(error){
         res.status(500).json({message:"server side error"});
     };

@@ -81,7 +81,7 @@ io.on("connection",(socket)=>{
         const foundChat = await Chat.findOneAndUpdate({_id:message.chat,"lastMessage.messageId":message._id,"lastMessage.sender":{$ne:user}},{$addToSet:{"lastMessage.readBy":user}},{new:true});
         console.log(foundChat)
         if(!foundChat) return ;
-        socket.to(String(foundChat._id)).emit("message read",{updatedChat:foundChat});
+        socket.to(foundChat.lastMessage.sender.toString()).emit("message read",{updatedChat:foundChat});
     });
     socket.on("disconnect",async()=>{
         try{
