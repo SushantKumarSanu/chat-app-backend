@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
-
+import { registerSchema } from "../validators/auth.validator.js";
+import { loginSchema } from "../validators/auth.validator.js";
 
 const generateToken = (userId) =>{
     return jwt.sign({userId},process.env.JWT_SECRET,{
@@ -12,14 +13,11 @@ const generateToken = (userId) =>{
 
 export const register = async(req,res)=>{
     try{
+        const {error} = registerSchema.validate(req.body);
+        if(error) return res.status(400).json({message:error.details[0].message});
         const {username,email,password} = req.body;        
-        if(!username||!email||!password) {
-            return res.status(400).json({
-                message: "All fields are required"
-            });
-        }
-        const existinguser = await User.findOne({email});
-        if(existinguser) {
+        const existingUser = await User.findOne({email});
+        if(existingUser) {
             return res.status(409).json({message:"User already exist"});
         } 
         const user = await User.create({
@@ -47,13 +45,9 @@ export const register = async(req,res)=>{
 
 export const login = async (req,res)=>{
     try{
-        const {email,password}= req.body
-            if(!email||!password){
-                return res.status(400).json({
-                message: "Email and password are required"
-                });
-            }
-
+        const {error} = loginSchema.validate(req.body);
+        if(error) return res.status(400).json({message:error.details[0].message});
+        const {email,password}= req.body;
         const user = await User.findOne({email}).select("+password");
         if(!user){
             return res.status(401).json({message:"Invalid credentials"})
