@@ -17,7 +17,6 @@ export const sendMessage = async (req,res) =>{
         })
         message = await message.populate("sender","username email avatar");
         const chat = await Chat.findByIdAndUpdate(chatId,{$set:{"lastMessage.messageId":message._id,"lastMessage.content":message.content,"lastMessage.sender":req.user._id,"lastMessage.readBy":[]}}).lean();
-        console.log(chat)
         io.to(chatId).emit("new message",message);
         res.status(201).json(message);
     }catch(error){
@@ -39,12 +38,10 @@ export const fetchMessages = async(req,res) =>{
         const skip = (page - 1)*limit;
         const messages = await Message.find({chat:chatId})
         .populate("sender","username avatar email")
-        .populate("chat")
         .sort({createdAt:-1})
         .skip(skip)
         .limit(limit)
         if(chat){
-        console.log("hellow2")
         io.to(chat.lastMessage.sender.toString()).emit("message read",{updatedChat:chat});
         }
         res.status(200).json(messages);

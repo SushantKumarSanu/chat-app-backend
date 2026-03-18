@@ -15,14 +15,6 @@ export const accessChat = async (req,res) => {
             users:{$all:[req.user._id,userId]}
         })
         .populate("users","-password")
-        .populate({
-                    path: "lastMessage.messageId",
-                    populate: {
-                        path: "sender",
-                        select: "username email"
-                    }
-                });
-
         if(chat){
             return res.status(200).json(chat);
         }
@@ -47,13 +39,6 @@ export const fetchChats = async (req,res) =>{
             users:{$in:[req.user._id]}
         })
         .populate("users","-password")
-        .populate({
-                    path: "lastMessage.messageId",
-                    populate: {
-                        path: "sender",
-                        select: "username email"
-                    }
-                })
         .sort({updatedAt:-1});
         const chatIds = chats.map(chat=>chat._id);
         const undeliveredMessages = await Message.find({
