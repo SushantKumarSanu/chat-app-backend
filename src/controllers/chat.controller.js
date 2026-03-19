@@ -1,15 +1,18 @@
 import { isObjectIdOrHexString } from "mongoose";
 import Chat from "../models/Chat.js";
 import Message from "../models/Message.js";
+import { accessChatSchema } from "../validators/chat.validator.js";
 import {io} from "../server.js";
 
 
 export const accessChat = async (req,res) => {
     try{
+        const {error} = accessChatSchema.validate(req.body);
+        if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")})
         const {userId} = req.body;
-        if(!userId){
-            return res.status(400).json({message:"UserId is required"});
-        }
+        let otherUser = await User.findById(userId);
+        if(!otherUser) return res.status(404).json({message:"User not found"});
+        if(userId===req.user._id.toString()) return res.status(400).json({message:"Cannot create chat with yourself"}) ;
         let chat = await Chat.findOne({
             isGroupChat:false,
             users:{$all:[req.user._id,userId]}
