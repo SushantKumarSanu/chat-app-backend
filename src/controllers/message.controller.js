@@ -34,9 +34,20 @@ export const fetchMessages = async(req,res) =>{
         },{convert:true}) ;
         if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")});   
         const {chatId,page,limit} = value;
-        const chat = await Chat.findOneAndUpdate({_id:chatId,"lastMessage.sender":{$ne:req.user._id}}
-        ,{$addToSet:{"lastMessage.readBy":req.user._id}},{new:true});
-        if(!chat) return res.status(404).json({message:"chat not found"});
+        const chat = await Chat.findById(chatId);
+
+        if (!chat) {
+            return res.status(404).json({ message: "chat not found" });
+        }
+
+        if (!chat.users.includes(req.user._id)) {
+            return res.status(403).json({ message: "Unauthorized" });
+        }
+
+        if(chat.lastMessage && chat.lastMessage.sender?.toString() !== req.user._id.toString()) {
+            chat.lastMessage.readBy.addToSet(req.user._id);
+            await chat.save();
+        }
         const skip = (page - 1)*limit;
         const messages = await Message.find({chat:chatId})
         .populate("sender","username avatar email")
