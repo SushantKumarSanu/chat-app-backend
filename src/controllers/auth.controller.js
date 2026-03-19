@@ -14,7 +14,7 @@ const generateToken = (userId) =>{
 export const register = async(req,res)=>{
     try{
         const {error} = registerSchema.validate(req.body);
-        if(error) return res.status(400).json({message:error.details[0].message});
+        if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")});
         const {username,email,password} = req.body;        
         const existingUser = await User.findOne({email});
         if(existingUser) {
@@ -46,7 +46,7 @@ export const register = async(req,res)=>{
 export const login = async (req,res)=>{
     try{
         const {error} = loginSchema.validate(req.body);
-        if(error) return res.status(400).json({message:error.details[0].message});
+        if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")});
         const {email,password}= req.body;
         const user = await User.findOne({email}).select("+password");
         if(!user){
