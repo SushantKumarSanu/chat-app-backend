@@ -1,14 +1,14 @@
 import Message from "../models/Message.js";
 import Chat from "../models/Chat.js";
 import {io} from "../server.js";
+import { fetchMessageSchema, sendMessageSchema } from "../validators/message.validator.js";
 
 
 export const sendMessage = async (req,res) =>{
     try{
+        const {error} = sendMessageSchema.validate(req.body);
+        if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")});
         const {chatId,content,messageType} = req.body;
-        if(!chatId||!content){
-            return res.status(400).json({message:"Chatid and content is required"});
-        }
         let message = await Message.create({
             sender:req.user._id,
             chat:chatId,
@@ -27,21 +27,23 @@ export const sendMessage = async (req,res) =>{
 
 export const fetchMessages = async(req,res) =>{
     try{
-        const {chatId} = req.params
-        if(!chatId){
-            return res.status(400).json({message:"Chatid is required"});
-        };
+        const {error,value} = fetchMessageSchema.validate({
+            chatId:req.params.chatId,
+            page:req.query.page,
+            limit:req.query.limit
+        },{convert:true}) ;
+        if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")});   
+        const {chatId,page,limit} = value;
         const chat = await Chat.findOneAndUpdate({_id:chatId,"lastMessage.sender":{$ne:req.user._id}}
         ,{$addToSet:{"lastMessage.readBy":req.user._id}},{new:true});
-        const page = Number(req.query.page) || 1
-        const limit = Number(req.query.limit) || 20 
+        if(!chat) return res.status(404).json({message:"chat not found"});
         const skip = (page - 1)*limit;
         const messages = await Message.find({chat:chatId})
         .populate("sender","username avatar email")
         .sort({createdAt:-1})
         .skip(skip)
         .limit(limit)
-        if(chat){
+        if(chat.lastMessage?.sender){
         io.to(chat.lastMessage.sender.toString()).emit("message read",{updatedChat:chat});
         }
         res.status(200).json(messages);
