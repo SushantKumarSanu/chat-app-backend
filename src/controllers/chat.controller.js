@@ -43,8 +43,38 @@ export const fetchChats = async (req,res) =>{
             users:{$in:[req.user._id]}
         })
         .populate("users","-password")
-        .sort({updatedAt:-1});
+        .sort({updatedAt:-1})
+        .lean();
         const chatIds = chats.map(chat=>chat._id);
+        const modifiedChatlst= await Promise.all(
+            chats.map(
+                async(chat)=>{
+                    const userId = req.user._id.toString();
+                    if(chat?.lastMessage?.sender?.toString()===userId || 
+                        chat?.lastMessage?.readBy?.some((id)=> id.toString()===userId)){
+                            return {...chat,unreadCount:0}
+                        }
+                    let unreadCount ; 
+                    const lastReadMessageId = chat.lastRead?.[userId];
+
+                    if(!lastReadMessageId){    
+                        unreadCount = await Message.countDocuments({
+                        chat:chat._id,
+                        sender:{$ne:req.user._id}
+                        });
+                        return{...chat,unreadCount}
+                    }
+                    const lastReadMessage = await Message.findById(lastReadMessageId).select("createdAt");
+                    unreadCount = await Message.countDocuments({
+                        chat:chat._id,
+                        sender:{$ne:req.user._id},
+                        createdAt:{$gt:lastReadMessage.createdAt}
+                    });
+                    return {...chat,unreadCount}
+                }
+                    
+            )
+        );
         const undeliveredMessages = await Message.find({
             chat:{ $in: chatIds },
             sender:{ $ne: req.user._id },
@@ -61,7 +91,7 @@ export const fetchChats = async (req,res) =>{
                 user:req.user._id
             });
         });
-        res.status(200).json(chats);
+        res.status(200).json(modifiedChatlst);
     }catch(error){
         res.status(500).json({ message: "Server error" });
     }

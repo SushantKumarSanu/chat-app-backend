@@ -16,7 +16,17 @@ export const sendMessage = async (req,res) =>{
             messageType:messageType||"text"
         })
         message = await message.populate("sender","username email avatar");
-        const chat = await Chat.findByIdAndUpdate(chatId,{$set:{"lastMessage.messageId":message._id,"lastMessage.content":message.content,"lastMessage.sender":req.user._id,"lastMessage.readBy":[]}}).lean();
+        const chat = await Chat.findByIdAndUpdate(
+            chatId,{
+                $set:{
+                    "lastMessage.messageId":message._id,
+                    "lastMessage.content":message.content,
+                    "lastMessage.sender":req.user._id,
+                    "lastMessage.readBy":[],
+                    [`lastRead.${req.user._id}`]:message._id                
+                }
+            }
+            ).lean();
         io.to(chatId).emit("new message",message);
         res.status(201).json(message);
     }catch(error){
@@ -40,12 +50,16 @@ export const fetchMessages = async(req,res) =>{
             return res.status(404).json({ message: "chat not found" });
         }
 
-        if (!chat.users.includes(req.user._id)) {
+        if (!chat.users.some(id => id.toString() === req.user._id.toString())) {
             return res.status(403).json({ message: "Unauthorized" });
         }
 
         if(chat.lastMessage && chat.lastMessage.sender?.toString() !== req.user._id.toString()) {
             chat.lastMessage.readBy.addToSet(req.user._id);
+            chat.lastRead.set(
+                req.user._id.toString(),
+                chat.lastMessage.messageId
+            );
             await chat.save();
         }
         const skip = (page - 1)*limit;

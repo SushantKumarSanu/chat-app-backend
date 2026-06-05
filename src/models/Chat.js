@@ -5,6 +5,13 @@ const chatSchema = new mongoose.Schema({
         type:Boolean,
         default:false
     },
+    lastRead:{
+        type:Map,
+        of:{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"Message"
+        }
+    },
     users:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:"User"
