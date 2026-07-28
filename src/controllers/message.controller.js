@@ -22,12 +22,11 @@ export const sendMessage = async (req,res) =>{
                     "lastMessage.messageId":message._id,
                     "lastMessage.content":message.content,
                     "lastMessage.sender":req.user._id,
-                    "lastMessage.readBy":[],
-                    [`lastRead.${req.user._id}`]:message._id                
+                    "lastMessage.readBy":[]      
                 }
-            }
+            },{new:true}
             ).lean();
-        io.to(chatId).emit("new message",message);
+        io.to(chatId).emit("new message",{message,chat});
         res.status(201).json(message);
     }catch(error){
         res.status(500).json({ message: "Server error" });
