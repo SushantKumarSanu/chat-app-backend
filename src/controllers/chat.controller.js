@@ -87,7 +87,7 @@ export const fetchChats = async (req,res) =>{
         });
         undeliveredMessages.forEach(msg => {
             io.to(msg.sender.toString()).emit("message recieved",{
-                message:msg._id,
+                messageId:msg._id,
                 user:req.user._id
             });
         });

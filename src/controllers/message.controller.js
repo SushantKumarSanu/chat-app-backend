@@ -22,7 +22,6 @@ export const sendMessage = async (req,res) =>{
                     "lastMessage.messageId":message._id,
                     "lastMessage.content":message.content,
                     "lastMessage.sender":req.user._id,
-                    "lastMessage.readBy":[]      
                 }
             },{new:true}
             ).lean();
@@ -54,7 +53,6 @@ export const fetchMessages = async(req,res) =>{
         }
 
         if(chat.lastMessage && chat.lastMessage.sender?.toString() !== req.user._id.toString()) {
-            chat.lastMessage.readBy.addToSet(req.user._id);
             chat.lastRead.set(
                 req.user._id.toString(),
                 chat.lastMessage.messageId
