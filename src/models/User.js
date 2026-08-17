@@ -24,9 +24,15 @@ const userSchema =new mongoose.Schema({
       select: false, 
     },
     avatar: {
-      type: String,
-      default: "",
+      public_id:{
+        type: String,
+        default: "",
     },
+    secure_url:{
+        type:String,
+        default:"",
+    }
+  },
     isOnline: {
       type: Boolean,
       default: false,
