@@ -5,6 +5,7 @@ import protectedRoutes from './routes/protected.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import messageRoutes from './routes/message.routes.js';
 import UserRoutes from './routes/user.routes.js';
+import profileRoutes from './routes/profile.routes.js'
 const app = express();
 
 
@@ -19,6 +20,8 @@ app.use('/api/protected',protectedRoutes);
 app.use('/api/chat',chatRoutes);
 app.use('/api/messages',messageRoutes);
 app.use('/api/users',UserRoutes);
+app.use('/api/protected/profile',profileRoutes);
+
 
 app.get('/',(req,res)=>{
     res.send('server is running');
