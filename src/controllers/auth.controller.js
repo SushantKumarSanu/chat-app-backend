@@ -15,13 +15,15 @@ export const register = async(req,res)=>{
     try{
         const {error} = registerSchema.validate(req.body);
         if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")});
-        const {username,email,password} = req.body;        
+        const {userName,email,password,confirmPassword} = req.body;
+        const isConfirmedPassword = password===confirmPassword;
+        if(!isConfirmedPassword) return res.status(400).json({success:false,message: 'New password and confirmation password do not match.'});        
         const existingUser = await User.findOne({email});
         if(existingUser) {
             return res.status(409).json({message:"User already exist"});
         } 
         const user = await User.create({
-            username,
+            username: userName ,
             email,
             password
         });
@@ -30,11 +32,7 @@ export const register = async(req,res)=>{
         res.status(201).json({
             message:"User created successfully",
             token,
-            user:{
-                id:user._id,
-                username:user.username,
-                email: user.email
-            }
+            user
         });
     }catch(error){
         res.status(500).json({message: "Internal Server Error"});
