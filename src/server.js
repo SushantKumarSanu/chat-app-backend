@@ -5,102 +5,32 @@ import "dotenv/config";
 
 import http from 'http';
 import {Server} from 'socket.io';
-import app from './app.js';
+import app from './app.ts';
 import User from './models/User.js';
 import Message from './models/Message.js';
 import Chat from './models/Chat.js';
 import connectDB from './configs/db.js';
-import jwt from 'jsonwebtoken';
+import setupSocket from "./socket/index.js";
+import authMiddleware from "./socket/middlewares/auth.middleware.js";
+import handleSocketConnection from "./socket/handlers/handle.connection.js";
 
 connectDB();
 
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000 ;
-const io = new Server(server,{
-    cors:{
-        origin:"*"
-    }
-});
+// const io = new Server(server,{
+//     cors:{
+//         origin:"*"
+//     }
+// });
+
+const io = setupSocket(server);
 
 
+io.use(authMiddleware);
 
-io.use(async(socket,next)=>{
-    try{
-        const token = socket.handshake.auth?.token;
-        if (!token) {
-            return next(new Error("No token provided"));
-        };
-        const decoded = jwt.verify(token,process.env.JWT_SECRET);
-        socket.userId = decoded.userId;
-        await User.findByIdAndUpdate(socket.userId,{isOnline:true});
-        next();
-    }catch{
-        next(new Error("Not authenticated")); 
-    };
 
-});
-
-io.on("connection",(socket)=>{
-    console.log("Socket connected:",socket.id);
-
-    if(socket.userId){
-        socket.broadcast.emit("user online",{user:socket.userId});
-        socket.join(socket.userId);
-        console.log(`Joined the personal room of name ${socket.userId}`);
-    }
-    socket.emit("connected");
-    socket.on("join chat",(chatId)=>{
-        if(!socket.userId||!chatId){
-            console.log(!chatId ? "chatId is required" : "not authenticated");
-            return;
-        };
-        socket.join(chatId);
-        socket.emit("join chat");
-        console.log(`User ${socket.userId} is connected to the chat ${chatId}`);
-
-    });
-    socket.on("typing",(chatId)=>{
-        if(!chatId || !socket.userId) return;
-        
-        socket.to(chatId).emit("typing",{chatId,user:socket.userId});
-    });
-    socket.on("stop typing",(chatId)=>{
-          if(!chatId || !socket.userId) return;
-        socket.to(chatId).emit("stop typing",{chatId,user:socket.userId});
-    });
-    socket.on("message recieved",async ({message,user})=>{
-        if(!user||!message) return;
-        const foundUser = await User.findById(user)
-        const foundMessage = await Message.findByIdAndUpdate(message,{deliveredTo:[foundUser._id]});
-        if(!foundUser||!foundMessage) return ;
-
-        socket.to(String(foundMessage.sender._id)).emit("message recieved",{messageId:message,user:foundUser._id});
-    });
-    socket.on("message read",async({message,user})=>{
-        if(!message||!user) return;
-        const foundUser = await User.findById(message.sender);
-        if(!foundUser) return;
-        const foundChat = await Chat.findOneAndUpdate({_id:message.chat,"lastMessage.messageId":message._id,"lastMessage.sender":{$ne:user}},{
-        $set:{[`lastRead.${user}`]:message._id}
-    },{new:true});
-        console.log(foundChat)
-        if(!foundChat) return ;
-        socket.to(foundChat.lastMessage.sender.toString()).emit("message read",{updatedChat:foundChat});
-    });
-    socket.on("disconnect",async()=>{
-        try{
-        console.log("Socket disconnected :",socket.id);
-        if(!socket.userId) return;
-        const room = io.sockets.adapter.rooms.get(socket.userId);
-        if(!room){
-            await User.findByIdAndUpdate(socket.userId,{isOnline:false}).lean();
-            socket.broadcast.emit("user offline",{user:socket.userId});
-        };
-        }catch(error){
-            console.error("Disconnect error:",error);
-        }
-    });
-});
+io.on("connection",(socket)=>{handleSocketConnection(socket,io)});
 
 
 server.listen(PORT,()=>{
