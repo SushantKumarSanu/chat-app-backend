@@ -2,54 +2,69 @@ import Message from "../models/Message.js";
 import Chat from "../models/Chat.js";
 import {io} from "../server.js";
 import { fetchMessageSchema, sendMessageSchema } from "../validators/message.validator.js";
+import AppError from "../errors/appError.js";
 
 
 export const sendMessage = async (req,res) =>{
-    try{
-        const {error} = sendMessageSchema.validate(req.body);
-        if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")});
-        const {chatId,content,messageType} = req.body;
-        let message = await Message.create({
-            sender:req.user._id,
-            chat:chatId,
-            content,
-            messageType:messageType||"text"
-        })
-        message = await message.populate("sender","username email avatar");
-        const chat = await Chat.findByIdAndUpdate(
-            chatId,{
-                $set:{
-                    "lastMessage.messageId":message._id,
-                    "lastMessage.content":message.content,
-                    "lastMessage.sender":req.user._id,
-                }
-            },{new:true}
-            ).lean();
-        io.to(chatId).emit("new message",{message,chat});
-        res.status(201).json(message);
-    }catch(error){
-        res.status(500).json({ message: "Server error" });
-
+    
+    const {error} = sendMessageSchema.validate(req.body);
+    if(error){
+        throw new AppError(
+            error.details[0].message.replace(/"/g, ""),
+            400
+        );
+            
     }
+    const {chatId,content,messageType} = req.body;
+    let message = await Message.create({
+        sender:req.user._id,
+        chat:chatId,
+        content,
+        messageType:messageType||"text"
+    })
+    message = await message.populate("sender","username email avatar");
+    const chat = await Chat.findByIdAndUpdate(
+        chatId,{
+            $set:{
+                "lastMessage.messageId":message._id,
+                "lastMessage.content":message.content,
+                "lastMessage.sender":req.user._id,
+            }
+        },{new:true}
+    ).lean();
+    io.to(chatId).emit("new message",{message,chat});
+    res.status(201).json(message);
 }
 
+
 export const fetchMessages = async(req,res) =>{
-    try{
         const {error,value} = fetchMessageSchema.validate({
             chatId:req.params.chatId,
             page:req.query.page,
             limit:req.query.limit
         },{convert:true}) ;
-        if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")});   
+
+
+
+        if(error){
+            throw new AppError(
+                error.details[0].message.replace(/"/g, ""),
+                400
+            );            
+        }  
         const {chatId,page,limit} = value;
         const chat = await Chat.findById(chatId);
 
         if (!chat) {
-            return res.status(404).json({ message: "chat not found" });
-        }
+            throw new AppError( "Chat not found" ,
+                404
+            );
+        };
 
         if (!chat.users.some(id => id.toString() === req.user._id.toString())) {
-            return res.status(403).json({ message: "Unauthorized" });
+            throw new AppError("Unauthorized",
+                403
+            );            
         }
 
         if(chat.lastMessage && chat.lastMessage.sender?.toString() !== req.user._id.toString()) {
@@ -69,7 +84,5 @@ export const fetchMessages = async(req,res) =>{
         io.to(chat.lastMessage.sender.toString()).emit("message read",{updatedChat:chat});
         }
         res.status(200).json(messages);
-    }catch(error){
-        res.status(500).json({message:"server side error"});
-    };
+
 };

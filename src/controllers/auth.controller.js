@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import { registerSchema } from "../validators/auth.validator.js";
 import { loginSchema } from "../validators/auth.validator.js";
+import AppError from "../errors/appError.js";
 
 const generateToken = (userId) =>{
     return jwt.sign({userId},process.env.JWT_SECRET,{
@@ -12,16 +13,31 @@ const generateToken = (userId) =>{
 
 
 export const register = async(req,res)=>{
-    try{
         const {error} = registerSchema.validate(req.body);
-        if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")});
+        if(error){
+            throw new AppError(
+                error.details[0].message.replace(/"/g, ""),
+                400
+            );
+            
+        } 
         const {userName,email,password,confirmPassword} = req.body;
-        const isConfirmedPassword = password===confirmPassword;
-        if(!isConfirmedPassword) return res.status(400).json({success:false,message: 'New password and confirmation password do not match.'});        
         const existingUser = await User.findOne({email});
         if(existingUser) {
-            return res.status(409).json({message:"User already exist"});
+            throw new AppError(
+                "User already exist",
+                409
+            );            
         } 
+        const isConfirmedPassword = password===confirmPassword;
+        if(!isConfirmedPassword){
+            throw new AppError(
+                "New password and confirmation password do not match.",
+                400
+            );
+            
+        };      
+
         const user = await User.create({
             username: userName ,
             email,
@@ -34,27 +50,34 @@ export const register = async(req,res)=>{
             token,
             user
         });
-    }catch(error){
-        res.status(500).json({message: "Internal Server Error"});
-
-    }
 };
 
 
 export const login = async (req,res)=>{
-    try{
         const {error} = loginSchema.validate(req.body);
-        if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")});
+        if(error){
+            throw new AppError(
+                error.details[0].message.replace(/"/g, ""),
+                400
+            );
+            
+        };
         const {email,password}= req.body;
         const user = await User.findOne({email}).select("+password");
         if(!user){
-            return res.status(401).json({message:"Invalid credentials"})
-        }
+            throw new AppError(
+                "Invalid credentials",
+                401
+            );
+            
+        };
         const isMatch = await user.comparePassword(password);
+        
         if (!isMatch) {
-        return res.status(401).json({ message: "Invalid credentials" });
-        }
-
+            throw new AppError("Invalid credentials",
+                401
+            );
+        };
 
         const token = generateToken(user._id);
         res.status(200).json({
@@ -63,7 +86,5 @@ export const login = async (req,res)=>{
             user
         })
 
-    }catch(error){
-        res.status(500).json({message: "Internal Server Error"});
-    }
+
 }

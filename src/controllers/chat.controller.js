@@ -1,19 +1,35 @@
-import { isObjectIdOrHexString } from "mongoose";
+
 import Chat from "../models/Chat.js";
 import User from "../models/User.js"
 import Message from "../models/Message.js";
 import { accessChatSchema } from "../validators/chat.validator.js";
 import {io} from "../server.js";
+import AppError from "../errors/appError.js";
 
 
 export const accessChat = async (req,res) => {
-    try{
         const {error} = accessChatSchema.validate(req.body);
-        if(error) return res.status(400).json({message:error.details[0].message.replace(/"/g, "")})
+        if(error){
+            throw new AppError(
+                error.details[0].message.replace(/"/g, ""),
+                400
+            ); 
+        } 
         const {userId} = req.body;
         let otherUser = await User.findById(userId);
-        if(!otherUser) return res.status(404).json({message:"User not found"});
-        if(userId===req.user._id.toString()) return res.status(400).json({message:"Cannot create chat with yourself"}) ;
+        if(!otherUser){
+            throw new AppError(
+                "User not found",
+                404
+            );
+            
+        };
+        if(userId===req.user._id.toString()){
+            throw new AppError(
+                "Cannot create chat with yourself",
+                400
+            ); 
+        } 
         let chat = await Chat.findOne({
             isGroupChat:false,
             users:{$all:[req.user._id,userId]}
@@ -31,14 +47,10 @@ export const accessChat = async (req,res) => {
         .populate("users","-password");
 
         res.status(201).json(fullChat);
-    }catch(error){
-        console.error("ACCESS CHAT ERROR:", error);
-        res.status(500).json({message: "Server error"});
-    }
+
 }
 
 export const fetchChats = async (req,res) =>{
-    try{
         const chats = await Chat.find({
             users:{$in:[req.user._id]}
         })
@@ -79,20 +91,21 @@ export const fetchChats = async (req,res) =>{
             chat:{ $in: chatIds },
             sender:{ $ne: req.user._id },
             deliveredTo: { $ne: req.user._id }
-        })
-        const messages = await Message.updateMany({
+        });
+
+        await Message.updateMany({
             _id:{$in:undeliveredMessages.map(m=>m._id)}
         },{
             $addToSet:{deliveredTo:req.user._id}
         });
+
         undeliveredMessages.forEach(msg => {
             io.to(msg.sender.toString()).emit("message recieved",{
                 messageId:msg._id,
                 user:req.user._id
             });
         });
+
         res.status(200).json(modifiedChatlst);
-    }catch(error){
-        res.status(500).json({ message: "Server error" });
-    }
+
 }

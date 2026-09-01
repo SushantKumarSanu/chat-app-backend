@@ -1,4 +1,5 @@
 import multer from "multer";
+import AppError from "../errors/appError.js";
 
 const storage = multer.memoryStorage();
 
@@ -7,7 +8,7 @@ const fileFilter = (req , file , cb) => {
     if(file.mimetype.startsWith("image/")){
         cb(null,true);
     }else{
-        cb(new Error("Only image files are allowed"),false);
+        cb(new AppError("Only image files are allowed",400),false);
     }
 };
 
@@ -21,13 +22,8 @@ const multerUpload = multer({
 
 const upload = (req,res,next)=>{
     multerUpload.single("avatar") (req , res , (error)=>{
-        if(error){
-        return res.status(400).json({
-            success: false,
-            message: error.message
-        });
-    }
-    next()
+    if(error) return next(error);
+    next();
     });
 }
 
