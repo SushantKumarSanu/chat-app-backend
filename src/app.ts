@@ -7,6 +7,8 @@ import messageRoutes from './routes/message.routes.js';
 import UserRoutes from './routes/user.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import accountRoutes from './routes/account.routes.js'
+import errorMiddleware from './middlewares/error.middleware.js';
+import testRouter from './routes/test.routes.js';
 const app = express();
 
 
@@ -23,10 +25,19 @@ app.use('/api/messages',messageRoutes);
 app.use('/api/users',UserRoutes);
 app.use('/api/protected/profile',profileRoutes);
 app.use('/api/account',accountRoutes);
+app.use('/api/test',testRouter);
+
+
 
 app.get('/',(req,res)=>{
     res.send('server is running');
 });
+
+
+
+app.use(errorMiddleware);
+
+
 
 
 
