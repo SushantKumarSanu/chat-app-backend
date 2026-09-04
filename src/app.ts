@@ -9,6 +9,7 @@ import profileRoutes from './routes/profile.routes.js';
 import accountRoutes from './routes/account.routes.js'
 import errorMiddleware from './middlewares/error.middleware.js';
 import testRouter from './routes/test.routes.js';
+import notFoundMiddleware from './middlewares/notFound.middleware.js';
 const app = express();
 
 
@@ -34,7 +35,7 @@ app.get('/',(req,res)=>{
 });
 
 
-
+app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
 
