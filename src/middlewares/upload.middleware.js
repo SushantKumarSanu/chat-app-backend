@@ -22,8 +22,16 @@ const multerUpload = multer({
 
 const upload = (req,res,next)=>{
     multerUpload.single("avatar") (req , res , (error)=>{
-    if(error) return next(error);
-    next();
+        if(error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE"){
+            return next( 
+                new AppError(
+                    "File size must be under 5 MB",
+                    400
+                )
+        );  
+        }
+        if(error) return next(error);
+        next();
     });
 }
 
