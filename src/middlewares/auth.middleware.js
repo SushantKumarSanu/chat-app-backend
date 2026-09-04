@@ -17,6 +17,16 @@ const authMiddleware = async(req,res,next)=>{
 
         try {
             decoded = jwt.verify(token,process.env.JWT_SECRET);
+
+            const user = await User.findById(decoded.userId);
+            if(!user){
+                throw new AppError("User not found",
+                    401
+                );
+            };
+            
+            req.user = user ;
+
         } catch (error) {
             if (error.name === "JsonWebTokenError"){
                 throw new AppError(
@@ -34,15 +44,8 @@ const authMiddleware = async(req,res,next)=>{
         }
 
 
-        const user = await User.findById(decoded.userId);
 
-        if(!user){
-            throw new AppError("User not found",
-                401
-            );
-        }
 
-        req.user = user ;
         next();
 
 
