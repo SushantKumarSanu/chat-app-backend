@@ -4,7 +4,12 @@ import logger from "../logger/logger.js";
 
 const connectDB = async ()=>{
     try{
-        await mongoose.connect(process.env.MONGO_URI);
+        const mongoUrl = process.env.MONGO_URI;
+        if(!mongoUrl){
+            logger.error("MongoDb URL is missing");
+            return;
+        }
+        await mongoose.connect(mongoUrl);
         logger.info('Connected to database successfully')
     }catch(error){
         logger.error(
