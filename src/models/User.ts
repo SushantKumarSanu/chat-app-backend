@@ -20,9 +20,14 @@ interface IUser{
 
 };
 
-type UserDocument = HydratedDocument<IUser>;
+interface IUserMethods{
+  comparePassword(enteredPassword:string): Promise<boolean>;
+}
 
-const userSchema =new mongoose.Schema<IUser>({  
+type UserModel = mongoose.Model<IUser, {}, IUserMethods>;
+type UserDocument = HydratedDocument<IUser,IUserMethods>;
+
+const userSchema =new mongoose.Schema<IUser,{},IUserMethods>({  
     username: {
       type: String,
       required: true,
@@ -76,4 +81,4 @@ userSchema.methods.comparePassword = async function (enteredPassword:string){
     return await bcrypt.compare(enteredPassword,this.password);
 }
 export type {IUser , UserDocument};
-export default mongoose.model('User',userSchema);
+export default mongoose.model<IUser,UserModel>('User',userSchema);
