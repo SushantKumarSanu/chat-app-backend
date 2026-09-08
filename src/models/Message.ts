@@ -7,6 +7,8 @@ interface IMessage {
     messageType:"text"|"code",
     content:string,
     deliveredTo:mongoose.Types.ObjectId[],
+    createdAt:Date,
+    updatedAt:Date,
 }
 
 type MessageDocument = HydratedDocument<IMessage>;
