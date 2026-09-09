@@ -1,11 +1,12 @@
 import {userNameSchema} from "../validators/updateProfile.validator.js"
+import type { Request,Response } from "express";
 import User from "../models/User.js";
-import AppError from "../errors/appError.js";
-export const updateUserName = async (req,res)=>{
+import AppError from "../errors/AppError.js";
+export const updateUserName = async (req:Request,res:Response)=>{
         const {error} = userNameSchema.validate(req.body);
         if(error){
             throw new AppError(
-                error.details[0].message.replace(/"/g, ""),
+                error.details[0]?.message?.replace(/"/g, "")??"Invalid request",
                 400            
             );
             
