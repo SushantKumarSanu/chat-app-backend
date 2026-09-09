@@ -1,10 +1,11 @@
 import streamifier from "streamifier";
 import User from "../models/User.js";
 import cloudinary from "../configs/cloudinary.js";
-import AppError from "../errors/appError.js";
+import AppError from "../errors/AppError.js";
+import type { Request,Response } from "express";
+import type { UploadApiResponse } from "cloudinary";
 
-
-export const updateAvatar = async( req , res )=>{
+export const updateAvatar = async( req:Request , res:Response )=>{
 
         if(!req.file){
             throw new AppError(
@@ -12,6 +13,8 @@ export const updateAvatar = async( req , res )=>{
                 400
             )
         };
+
+        const file = req.file;
         const user = await User.findById(req.user._id);
         if(!user) {
             throw new AppError(
@@ -19,20 +22,24 @@ export const updateAvatar = async( req , res )=>{
                 404
             ); 
         };
-        const result = await new Promise((resolve, reject) => {
+        const result = await new Promise<UploadApiResponse>((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
                 {
                     folder:"chatapp/avatars" ,
                 },
                 (error,result)=>{
                     if(error) return reject(error);
+                    if (!result) {
+                        return reject(new Error("Cloudinary upload failed"));
+                    }
+
+
                     resolve(result)
                 }
+                
             );
-            streamifier.createReadStream(req.file.buffer).pipe(stream);            
+            streamifier.createReadStream(file.buffer).pipe(stream);            
         });
-
-
 
         if(user.avatar?.public_id){
             await cloudinary.uploader.destroy(user.avatar.public_id)
