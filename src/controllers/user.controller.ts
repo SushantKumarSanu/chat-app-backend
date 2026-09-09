@@ -6,6 +6,7 @@ import User from "../models/User.js";
 export const searchUsers = async(req:Request,res:Response)=>{
 
     const {query} = req.query;
+    
 
     if(!query){
         throw new AppError(
@@ -13,7 +14,7 @@ export const searchUsers = async(req:Request,res:Response)=>{
             400
         )
     }
-
+    if(typeof query === "string"){
     const users = await User.find({
         _id:{$ne:req.user._id},
         email:{$regex:query,$options:"i"}
@@ -25,5 +26,5 @@ export const searchUsers = async(req:Request,res:Response)=>{
         result:users
     });
 
-
+    }
 };
