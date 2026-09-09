@@ -1,8 +1,9 @@
-import AppError from "../errors/appError.js";
+import type { Request , Response } from "express";
+import AppError from "../errors/AppError.js";
 import User from "../models/User.js";
 
 
-export const searchUsers = async(req,res)=>{
+export const searchUsers = async(req:Request,res:Response)=>{
 
     const {query} = req.query;
 
