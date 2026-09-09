@@ -2,11 +2,10 @@ import jwt from 'jsonwebtoken';
 import User from '../../models/User.js';
 import logger from '../../logger/logger.js';
 import SocketError from '../errors/SocketError.js';
+import type { Socket,ExtendedError } from 'socket.io';
 
 
-
-
-const authMiddleware = async(socket,next)=>{
+const authMiddleware = async(socket:Socket,next:(error?:ExtendedError)=>void)=>{
 
         const token = socket.handshake.auth?.token;
         if (!token) {
@@ -16,11 +15,24 @@ const authMiddleware = async(socket,next)=>{
             ));
         };
 
-        let decoded ;
         
         try {
 
-            decoded = jwt.verify(token,process.env.JWT_SECRET);
+            const jwtSecretKey = process.env.JWT_SECRET;
+
+            if(!jwtSecretKey){
+            throw Error("JWT_SECRET is not configured");
+            };
+            
+            let decoded  = jwt.verify(token,jwtSecretKey);
+            
+            if (typeof decoded !== "object" || decoded === null || !("userId" in decoded) ||
+            typeof decoded.userId !== "string")
+            {
+                throw new SocketError("Invalid token payload",
+                    "INVALID_TOKEN"
+                );
+            }
 
             socket.userId = decoded.userId;
 
@@ -37,14 +49,14 @@ const authMiddleware = async(socket,next)=>{
 
         } catch (error) {
 
-            if (error.name === "JsonWebTokenError"){
+            if (error instanceof Error && error.name === "JsonWebTokenError"){
                 return next( new SocketError(
                     "Invalid token" ,
                     "AUTHENTICATION_ERROR"
                     ));
             };
 
-            if(error.name === "TokenExpiredError"){
+            if(error instanceof Error && error.name === "TokenExpiredError"){
                 return next( new SocketError(
                     "Token Expired",
                     "AUTHENTICATION_ERROR"
