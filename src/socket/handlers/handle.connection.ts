@@ -2,10 +2,11 @@ import handleDisconnect  from "./handle.disconnect.js";
 import handleChat from "./handle.chat.js";
 import { handleUserTyping , handleStopTyping  } from "./handle.typing.js";
 import { handleMessageRead , handleMessageRecieved} from "./handle.message.js";
+import type { Socket,Server } from "socket.io";
 
 
 
-const handleSocketConnection = (socket,io)=>{   
+const handleSocketConnection = (socket:Socket,io:Server)=>{   
     console.log("Socket connected:",socket.id);
 
     if(socket.userId){
