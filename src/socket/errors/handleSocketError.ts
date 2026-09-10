@@ -1,7 +1,9 @@
+import type { Socket } from "socket.io";
 import logger from "../../logger/logger.js";
 import SocketError from "./SocketError.js";
 
-const handleSocketError = ({socket,error,context})=>{
+
+const handleSocketError = ({socket,error,context}:{socket:Socket,error:Error,context: Record<string, unknown>;})=>{
     if(error instanceof SocketError){
         socket.emit("socket error",{
             success:false,

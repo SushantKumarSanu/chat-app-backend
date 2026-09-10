@@ -1,9 +1,8 @@
 
 class SocketError extends Error  {
-    constructor(message,code) {
+    constructor(message:string,public code:string) {
         super(message);
-        this.name = "SocketError",
-        this.code = code
+        this.name = "SocketError"
     }
 };
 
