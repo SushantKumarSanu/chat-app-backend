@@ -1,9 +1,10 @@
 import User from "../../models/User.js";
 import Message from "../../models/Message.js";
 import Chat from "../../models/Chat.js";
+import type { Socket} from "socket.io"
 
 
-export const handleMessageRecieved = (socket) =>{
+export const handleMessageRecieved = (socket:Socket) =>{
 
     socket.on("message recieved",async ({message,user})=>{
         if(!user||!message) return;
@@ -23,7 +24,7 @@ export const handleMessageRecieved = (socket) =>{
 };
 
 
-export const handleMessageRead = (socket)=>{
+export const handleMessageRead = (socket:Socket)=>{
 
     socket.on("message read",async({message,user})=>{
 
@@ -40,11 +41,10 @@ export const handleMessageRead = (socket)=>{
             {$set:{[`lastRead.${user}`]:message._id}},
             {new:true});
 
-        console.log(foundChat);
 
         if(!foundChat) return ;
 
-        socket.to(foundChat.lastMessage.sender.toString()).emit("message read",{updatedChat:foundChat});
+        socket.to(message.sender.toString()).emit("message read",{updatedChat:foundChat});
     });
 
 };
