@@ -1,6 +1,6 @@
 import User from "../../models/User.js";
-
-const handleDisconnect = (socket,io)=>{
+import type { Socket, Server} from "socket.io";
+const handleDisconnect = (socket:Socket,io:Server)=>{
 
     socket.on("disconnect",async()=>{
 
