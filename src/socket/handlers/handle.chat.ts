@@ -1,8 +1,9 @@
+import type { ObjectId } from "mongoose";
+import type { Socket} from "socket.io"
 
+const handleChat = (socket:Socket)=>{
 
-const handleChat = (socket)=>{
-
-    socket.on("join chat",(chatId)=>{
+    socket.on("join chat",(chatId:string)=>{
 
         if(!socket.userId||!chatId){
             console.log(!chatId ? "chatId is required" : "not authenticated");
