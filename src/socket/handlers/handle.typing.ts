@@ -1,6 +1,6 @@
+import type { Socket } from "socket.io";
 
-
-export const handleUserTyping = (socket)=>{
+export const handleUserTyping = (socket:Socket)=>{
     socket.on("typing",(chatId)=>{
         
         if(!chatId || !socket.userId) return;
@@ -11,7 +11,7 @@ export const handleUserTyping = (socket)=>{
 }
 
 
-export const handleStopTyping = (socket) =>{
+export const handleStopTyping = (socket:Socket) =>{
 
     socket.on("stop typing",(chatId)=>{
 
