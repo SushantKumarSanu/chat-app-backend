@@ -2,12 +2,20 @@ import mongoose from "mongoose";
 import type { HydratedDocument } from "mongoose";
 
 interface IMessage {
+    deletedFor:mongoose.Types.ObjectId[],
+
     sender:mongoose.Types.ObjectId,
+
     chat:mongoose.Types.ObjectId,
+
     messageType:"text"|"code",
+
     content:string,
+
     deliveredTo:mongoose.Types.ObjectId[],
+
     createdAt:Date,
+
     updatedAt:Date,
 }
 
@@ -16,6 +24,11 @@ type MessageDocument = HydratedDocument<IMessage>;
 
 
 const messageSchema = new mongoose.Schema<IMessage>({
+    deletedFor:[{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"User",
+        default:[]
+    }],
     sender:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"User",
@@ -46,4 +59,5 @@ const messageSchema = new mongoose.Schema<IMessage>({
 );
 
 export type {MessageDocument};
+
 export default mongoose.model("Message",messageSchema);
