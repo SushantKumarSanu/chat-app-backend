@@ -24,11 +24,13 @@ type MessageDocument = HydratedDocument<IMessage>;
 
 
 const messageSchema = new mongoose.Schema<IMessage>({
-    deletedFor:[{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"User",
-        default:[]
-    }],
+    deletedFor: {
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }],
+        default: []
+    },
     sender:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"User",
