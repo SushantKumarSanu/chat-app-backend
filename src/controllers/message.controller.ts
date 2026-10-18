@@ -127,19 +127,33 @@ export const deleteMessage = async(req:Request,res:Response)=>{
         throw new AppError("Message doen't exists",404)
     };
 
-    const chat = await Chat.findOne({_id:existingMessage.chat,users:req.user._id});
+    const chat = await Chat.findOne({_id:existingMessage.chat,users:req.user._id}).populate('lastRead.$*')
+
 
     if(!chat){
         throw new AppError("You are not authorized to delete this message",403);
     };
 
+    const otherUserId = chat.users.find(
+        id => !id.equals(req.user._id)
+    );
+
+    if (!otherUserId) {
+        throw new AppError("Other user not found", 400);
+    }
+
+
+    let otherUserSeenMsg = chat.lastRead?.get(otherUserId.toString());
+    let isSeenByOtherUser;
+    if (otherUserSeenMsg && !(otherUserSeenMsg instanceof mongoose.Types.ObjectId)){
+        isSeenByOtherUser = existingMessage.createdAt <= otherUserSeenMsg.createdAt;
+    }
+
+
+
     if(existingMessage.deletedFor.some(id=>id.equals(req.user._id))){
         throw new AppError("This message was already deleted",400)
     };
-
-
-
-    const lastMessageId = chat.lastMessage?.messageId;
 
     const visibleLastMessage =await Message.findOne({
         chat:chat._id,
@@ -147,22 +161,54 @@ export const deleteMessage = async(req:Request,res:Response)=>{
     }).sort({createdAt:-1});
 
 
-
     let modifiedLastMessage =null ;
 
     if(visibleLastMessage && visibleLastMessage._id.equals(existingMessage._id)){
+
+        
         
         const previousMessage = await Message.findOne({chat: chat._id,
             createdAt: { $lt: existingMessage.createdAt },
             deletedFor: { $ne: req.user._id }})
             .sort({ createdAt: -1 });
-            
+        
             if(previousMessage){
                 modifiedLastMessage = {
                     messageId:previousMessage._id,
                     content:previousMessage.content,
                     sender:previousMessage.sender,
                 };
+                if(previousMessage.sender.toString()===req.user._id.toString()&&isSeenByOtherUser){         
+                
+                    const modifiedLastRead = {
+                        ...(chat.lastRead 
+                            ?
+                            Object.fromEntries(chat.lastRead): {}),
+                            [otherUserId.toString()]: previousMessage._id
+                    };
+
+                    existingMessage.deletedFor.push(req.user._id);
+                    await existingMessage.save();
+                    return res.status(200).json({success:true,message:'Message deleted successfully',lastMessage:modifiedLastMessage,lastRead:modifiedLastRead,chatId:chat._id})
+                    ;
+                }else if(previousMessage.sender.toString()!==req.user._id.toString()&&isSeenByOtherUser){
+                    const previousMessageSentbyUser =  await Message.findOne({chat: chat._id,
+                        createdAt: { $lt: existingMessage.createdAt },
+                        deletedFor: { $ne: req.user._id },sender:req.user._id}).sort({ createdAt: -1 });
+
+                    if(previousMessageSentbyUser){    
+                    const modifiedLastRead = {
+                        ...(chat.lastRead 
+                            ?
+                            Object.fromEntries(chat.lastRead): {}),
+                            [otherUserId.toString()]: previousMessageSentbyUser._id
+                    };
+
+                    existingMessage.deletedFor.push(req.user._id);
+                    await existingMessage.save();
+                    return res.status(200).json({success:true,message:'Message deleted successfully',lastMessage:modifiedLastMessage,lastRead:modifiedLastRead,chatId:chat._id}); 
+                    }
+                }                
             }
         existingMessage.deletedFor.push(req.user._id);
         await existingMessage.save();

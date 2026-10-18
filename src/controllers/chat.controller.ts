@@ -6,7 +6,6 @@ import { accessChatSchema } from "../validators/chat.validator.js";
 import {io} from "../server.js";
 import AppError from "../errors/AppError.js";
 import type { Request,Response } from "express";
-import  mongoose from "mongoose";
 
 export const accessChat = async (req:Request,res:Response) => {
         const {error} = accessChatSchema.validate(req.body);
@@ -84,13 +83,51 @@ export const fetchChats = async ( req:Request , res:Response ) =>{
                             }).sort({ createdAt: -1 });
 
                             if(previousMessage){
+                                const otherUser = chat.users.find(user=>user._id.toString() !== req.user._id.toString());
+                                let modifiedLastRead ;
+                                if(otherUser){
+                                    const otherUserId = otherUser._id
+                                    const otherUserLastReadId = chat.lastRead?.[otherUserId.toString()];
+
+                                    const otherUserLastReadMessage = otherUserLastReadId? 
+                                    await Message.findById(otherUserLastReadId).select("createdAt"): null;
+                                    
+                                    if(otherUserLastReadMessage&&
+                                        lastMessage.createdAt <= otherUserLastReadMessage.createdAt && 
+                                        previousMessage.sender.toString()===req.user._id.toString()){
+                                        modifiedLastRead={
+                                            ...(chat.lastRead?chat.lastRead:{}),
+                                            [otherUserId.toString()]:previousMessage._id
+                                        }
+                                    }else if(otherUserLastReadMessage&&
+                                        lastMessage.createdAt <= otherUserLastReadMessage.createdAt && 
+                                        previousMessage.sender.toString()!==req.user._id.toString()){
+                                            const previousMessageSentbyUser =  await Message.findOne({chat: chat._id,
+                                                createdAt: { $lt: lastMessage.createdAt },
+                                                deletedFor: { $ne: req.user._id },
+                                                sender:req.user._id})
+                                                .sort({ createdAt: -1 });
+                                            if(previousMessageSentbyUser){
+                                                modifiedLastRead={
+                                                    ...(chat.lastRead?chat.lastRead:{}),
+                                                    [otherUserId.toString()]:previousMessageSentbyUser._id
+                                                }      
+                                            }
+                                        
+                                    }
+                                }
+                                
+                                
                                 chat = {
                                     ...chat,
                                     lastMessage:{
                                         messageId:previousMessage._id,
                                         sender:previousMessage.sender,
                                         content:previousMessage.content
-                                    }
+                                    },
+                                    ...(modifiedLastRead&&{
+                                        lastRead:modifiedLastRead
+                                    })
                                 }
                             }else{
                                 const{lastMessage,...chatWithoutLastMessage} =chat
@@ -102,10 +139,6 @@ export const fetchChats = async ( req:Request , res:Response ) =>{
                             return {...chat,unreadCount:0}
                         }
                     let unreadCount:number ;
-
-                    // let lastChatDeletedDate = chat.deletedAt?.get(req.user._id.toString());
-
-                    // const lastReadMessageId = chat.lastRead?.get(userId);
                     const lastChatDeletedDate =chat.deletedAt?.[userId];
                     const lastReadMessageId =chat.lastRead?.[userId];
 
